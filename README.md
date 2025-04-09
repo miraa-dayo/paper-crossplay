@@ -15,7 +15,7 @@ To install the custom egg on your Pterodactyl panel, follow these steps:
 1. Download the egg files:
    - Download the "egg-paper-crossplay.json"
 
-   ``` https://github.com/miraa-dayo/paper-crossplay/blob/main/egg-paper-crossplay.json
+   https://github.com/miraa-dayo/paper-crossplay/blob/main/egg-paper-crossplay.json
 
 2. Upload the egg to your Pterodactyl Panel:
    1. Log in to your Pterodactyl panel as an admin.
