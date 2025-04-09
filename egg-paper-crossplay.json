@@ -1,0 +1,80 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2025-04-09T15:33:18+00:00",
+    "name": "Paper Crossplay",
+    "author": "hyuujirei@gmail.com",
+    "description": "PaperMC server with automatic plugin installation needed for crossplay SMPs: GeyserMC, Floodgate, ViaVersion, and ViaBackwards.",
+    "features": [
+        "eula",
+        "java_version",
+        "pid_limit"
+    ],
+    "docker_images": {
+        "Java 21": "ghcr.io\/pterodactyl\/yolks:java_21",
+        "Java 17": "ghcr.io\/pterodactyl\/yolks:java_17",
+        "Java 16": "ghcr.io\/pterodactyl\/yolks:java_16",
+        "Java 11": "ghcr.io\/pterodactyl\/yolks:java_11",
+        "Java 8": "ghcr.io\/pterodactyl\/yolks:java_8"
+    },
+    "file_denylist": [],
+    "startup": "java -Xms128M -XX:MaxRAMPercentage=95.0 --add-modules=jdk.incubator.vector -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1 -Dusing.aikars.flags=https:\/\/mcflags.emc.gs -Daikars.new.flags=true -XX:G1NewSizePercent=40 -XX:G1MaxNewSizePercent=50 -XX:G1HeapRegionSize=16M -XX:G1ReservePercent=15 -DGeyser.RakSendCookie=false -jar {{SERVER_JARFILE}}",
+    "config": {
+        "files": "{\r\n    \"server.properties\": {\r\n        \"parser\": \"properties\",\r\n        \"find\": {\r\n            \"server-ip\": \"0.0.0.0\",\r\n            \"server-port\": \"{{server.build.default.port}}\",\r\n            \"query.port\": \"{{server.build.default.port}}\"\r\n        }\r\n    }\r\n}",
+        "startup": "{\r\n    \"done\": \")! For help, type \"\r\n}",
+        "logs": "{}",
+        "stop": "stop"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!\/bin\/bash\r\napt update && apt install -y jq curl\r\n\r\ncd \/mnt\/server\r\n\r\nPROJECT=paper\r\n\r\nif [ -n \"${DL_PATH}\" ]; then\r\n    echo \"Using custom download URL: ${DL_PATH}\"\r\n    DOWNLOAD_URL=$(eval echo $(echo ${DL_PATH} | sed -e 's\/{{\/${\/g' -e 's\/}}\/}\/g'))\r\nelse\r\n    echo \"Fetching PaperMC versions...\"\r\n    LATEST_VERSION=$(curl -s https:\/\/api.papermc.io\/v2\/projects\/${PROJECT} | jq -r '.versions[-1]')\r\n\r\n    if [ \"${MINECRAFT_VERSION}\" = \"latest\" ] || [ -z \"${MINECRAFT_VERSION}\" ]; then\r\n        MINECRAFT_VERSION=${LATEST_VERSION}\r\n        echo \"No version provided. Using latest: ${MINECRAFT_VERSION}\"\r\n    fi\r\n\r\n    VERSION_EXISTS=$(curl -s https:\/\/api.papermc.io\/v2\/projects\/${PROJECT} | jq -r --arg ver ${MINECRAFT_VERSION} '.versions[] | select(. == $ver)')\r\n    if [ -z \"${VERSION_EXISTS}\" ]; then\r\n        echo \"Invalid version. Defaulting to latest: ${LATEST_VERSION}\"\r\n        MINECRAFT_VERSION=${LATEST_VERSION}\r\n    fi\r\n\r\n    LATEST_BUILD=$(curl -s https:\/\/api.papermc.io\/v2\/projects\/${PROJECT}\/versions\/${MINECRAFT_VERSION} | jq -r '.builds[-1]')\r\n    if [ \"${BUILD_NUMBER}\" = \"latest\" ] || [ -z \"${BUILD_NUMBER}\" ]; then\r\n        BUILD_NUMBER=${LATEST_BUILD}\r\n    fi\r\n\r\n    JAR_NAME=${PROJECT}-${MINECRAFT_VERSION}-${BUILD_NUMBER}.jar\r\n    DOWNLOAD_URL=https:\/\/api.papermc.io\/v2\/projects\/${PROJECT}\/versions\/${MINECRAFT_VERSION}\/builds\/${BUILD_NUMBER}\/downloads\/${JAR_NAME}\r\nfi\r\n\r\necho \"Downloading server jar: ${DOWNLOAD_URL}\"\r\nif [ -f ${SERVER_JARFILE} ]; then\r\n  mv ${SERVER_JARFILE} ${SERVER_JARFILE}.old\r\nfi\r\ncurl -o ${SERVER_JARFILE} ${DOWNLOAD_URL}\r\n\r\nif [ ! -f server.properties ]; then\r\n  echo \"Downloading default server.properties...\"\r\n  curl -o server.properties https:\/\/raw.githubusercontent.com\/parkervcp\/eggs\/master\/minecraft\/java\/server.properties\r\nfi\r\n\r\n# Create plugins directory\r\nmkdir -p plugins\r\n\r\n# GeyserMC Spigot\r\necho \"Downloading Geyser-Spigot...\"\r\ncurl -o plugins\/Geyser-Spigot.jar -L https:\/\/download.geysermc.org\/v2\/projects\/geyser\/versions\/latest\/builds\/latest\/downloads\/spigot\r\n\r\n# Create Geyser-Spigot directory\r\nmkdir -p plugins\/Geyser-Spigot\r\n\r\n# Download Geyser config.yml\r\necho \"Downloading Geyser config.yml...\"\r\ncurl -o plugins\/Geyser-Spigot\/config.yml https:\/\/raw.githubusercontent.com\/miraa-dayo\/paper-crossplay\/refs\/heads\/main\/config.yml\r\n\r\n# Floodgate Spigot\r\necho \"Downloading Floodgate-Spigot...\"\r\ncurl -o plugins\/floodgate-spigot.jar -L https:\/\/download.geysermc.org\/v2\/projects\/floodgate\/versions\/latest\/builds\/latest\/downloads\/spigot\r\n\r\n# Download ViaVersion\r\necho \"Downloading ViaVersion...\"\r\nVV_LATEST=$(curl -s https:\/\/api.github.com\/repos\/ViaVersion\/ViaVersion\/releases\/latest | jq -r '.tag_name')\r\ncurl -L --fail -o plugins\/ViaVersion.jar \"https:\/\/github.com\/ViaVersion\/ViaVersion\/releases\/download\/${VV_LATEST}\/ViaVersion-${VV_LATEST}.jar\" || {\r\n    echo \"Failed to download ViaVersion. Please check the URL or try manually.\"\r\n    exit 1\r\n}\r\n\r\n# Download ViaBackwards\r\necho \"Downloading ViaBackwards...\"\r\nVB_LATEST=$(curl -s https:\/\/api.github.com\/repos\/ViaVersion\/ViaBackwards\/releases\/latest | jq -r '.tag_name')\r\ncurl -L --fail -o plugins\/ViaBackwards.jar \"https:\/\/github.com\/ViaVersion\/ViaBackwards\/releases\/download\/${VB_LATEST}\/ViaBackwards-${VB_LATEST}.jar\" || {\r\n    echo \"Failed to download ViaBackwards. Please check the URL or try manually.\"\r\n    exit 1\r\n}\r\necho \"All plugins installed successfully.\"",
+            "container": "ghcr.io\/parkervcp\/installers:debian",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Minecraft Version",
+            "description": "The version of minecraft to download. \r\n\r\nLeave at latest to always get the latest version. Invalid versions will default to latest.",
+            "env_variable": "MINECRAFT_VERSION",
+            "default_value": "latest",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:20",
+            "field_type": "text"
+        },
+        {
+            "name": "Server Jar File",
+            "description": "The name of the server jarfile to run the server with.",
+            "env_variable": "SERVER_JARFILE",
+            "default_value": "server.jar",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|regex:\/^([\\w\\d._-]+)(\\.jar)$\/",
+            "field_type": "text"
+        },
+        {
+            "name": "Download Path",
+            "description": "A URL to use to download a server.jar rather than the ones in the install script. This is not user viewable.",
+            "env_variable": "DL_PATH",
+            "default_value": "",
+            "user_viewable": false,
+            "user_editable": false,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Build Number",
+            "description": "The build number for the paper release.\r\n\r\nLeave at latest to always get the latest version. Invalid versions will default to latest.",
+            "env_variable": "BUILD_NUMBER",
+            "default_value": "latest",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:20",
+            "field_type": "text"
+        }
+    ]
+}
